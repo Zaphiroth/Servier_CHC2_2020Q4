@@ -8,6 +8,11 @@
 
 ##---- Shanghai data ----
 ## pack info
+chpa.info <- read.xlsx('02_Inputs/ims_chpa_to20Q4.xlsx', cols = 1:21, startRow = 4) %>%  
+  distinct(corp = Corp_Desc, type = MNF_TYPE, atc3 = ATC3_Code, atc4 = ATC4_Code,  
+           molecule = Molecule_Desc, product = Prd_desc, pack = Pck_Desc,  
+           packid = Pack_ID)
+
 sh.info <- chpa.info %>% 
   distinct(prodid = stri_sub(packid, 1, 5), 
            atc3, 

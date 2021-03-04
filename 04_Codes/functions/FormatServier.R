@@ -190,6 +190,9 @@ FormatServier <- function(proj.price,
     filter(City %in% c('National', target.city)) %>% 
     filter(`Value LC` > 0, Units > 0, `Counting Units` > 0, 
            !is.infinite(`Value LC`), !is.infinite(Units), !is.infinite(`Counting Units`)) %>% 
+    group_by(Product) %>% 
+    mutate(Prod_CN_Name = first(na.omit(Prod_CN_Name))) %>% 
+    ungroup() %>% 
     select(Channel, City_EN, City, `Period Type`, Year, Quarter, Date, `ATCIII Code`, 
            `ATCIV Code`, MKT, `Category I`, `Category II`, `Molecule composition Name`, 
            `Product Name`, Product, Prod_CN_Name, `Pack Code`, `Pack Description`, 

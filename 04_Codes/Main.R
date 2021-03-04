@@ -9,8 +9,7 @@
 ##---- Total sample ----
 imp.total <- raw.total %>% 
   mutate(flag = 0) %>% 
-  bind_rows(imp.sh) %>% 
-  filter(quarter %in% c('2020Q4'))
+  bind_rows(imp.fj, imp.sh)
 
 write_feather(imp.total, '03_Outputs/Servier_CHC2_Imp.feather')
 

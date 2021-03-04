@@ -133,6 +133,38 @@ raw.gz <- raw.gz1 %>%
   filter(units > 0, sales > 0) %>% 
   select(year, date, quarter, province, city, district, pchc, market, packid, units, sales)
 
+## Venous
+raw.venous1 <- read_csv('02_Inputs/data/Servier_ahbjjssdzj_17181920_packid_moleinfo.csv', 
+                        locale = locale(encoding = 'GB18030'))
+
+raw.venous <- raw.venous1 %>% 
+  filter(Quarter == '2020Q4', 
+         !is.na(packcode)) %>% 
+  distinct(year = as.character(Year), 
+           quarter = Quarter, 
+           date = gsub('/', '', Month), 
+           province = gsub('省|市', '', Province), 
+           city = if_else(City == '市辖区', '北京', gsub('市', '', City)), 
+           district = County, 
+           hospital = Hospital_Name, 
+           atc3 = stri_sub(ATC4_Code, 1, 4), 
+           molecule = Molecule_Desc, 
+           packid = stri_pad_left(packcode, 7, 0), 
+           units = if_else(is.na(Volume), Value / Price, Volume), 
+           sales = Value) %>% 
+  left_join(pchc.mapping3, by = c('province', 'city', 'district', 'hospital')) %>% 
+  filter(!is.na(pchc)) %>% 
+  left_join(market.def, by = c('atc3', 'molecule')) %>% 
+  filter(!is.na(market)) %>% 
+  mutate(packid = if_else(stri_sub(packid, 1, 5) == '47775', 
+                          stri_paste('58906', stri_sub(packid, 6, 7)), 
+                          packid), 
+         packid = if_else(stri_sub(packid, 1, 5) == '06470', 
+                          stri_paste('64895', stri_sub(packid, 6, 7)), 
+                          packid)) %>% 
+  filter(units > 0, sales > 0) %>% 
+  select(year, date, quarter, province, city, district, pchc, market, packid, units, sales)
+
 ## check
 # chk <- raw.data %>% 
 #   filter(is.na(pchc), 
@@ -144,14 +176,7 @@ raw.gz <- raw.gz1 %>%
 
 
 ##---- Raw total ----
-raw.total <- bind_rows(raw.data, raw.fj, raw.gz) %>% 
-  # mutate(packid = case_when(packid == '0060212' & city %in% c('北京', '南京') ~ '0060206', 
-  #                           packid == '0243304' & city %in% c('北京') ~ '0243302', 
-  #                           packid == '0243306' ~ '0243304', 
-  #                           packid == '1065108' & city %in% c('北京') ~ '1065106', 
-  #                           packid == '1065108' & !(city %in% c('北京')) ~ '1065102', 
-  #                           packid == '3145210' & city %in% c('北京') ~ '3145208', 
-  #                           TRUE ~ packid)) %>% 
+raw.total <- bind_rows(raw.data, raw.fj, raw.venous, raw.gz) %>% 
   group_by(pchc) %>% 
   mutate(province = first(na.omit(province)), 
          city = first(na.omit(city)), 

@@ -98,7 +98,10 @@ corp.info <- read.xlsx('02_Inputs/MANU.xlsx')
 prod.cn <- read.xlsx('02_Inputs/Product standardization master data-A-S-0106_updated.xlsx') %>% 
   distinct(PACK_ID, PROD_NAME_CH, NFC1_NAME_CH)
 
-std.info <- bind_rows(chpa.info, master.info) %>% 
+sup.info <- read_xlsx('02_Inputs/Unmatched_SKU_M.xlsx') %>% 
+  distinct(packid = `Pack Code`, product_cn = Prod_CN_Name, route = `NFCI Description`)
+
+std.info <- bind_rows(chpa.info, master.info, sup.info) %>% 
   left_join(corp.info, by = c('corp' = 'name')) %>% 
   group_by(atc3) %>% 
   mutate(atc3_cn = first(na.omit(atc3_cn))) %>% 
@@ -237,12 +240,13 @@ servier.mat <- servier.history %>%
   ungroup()
 
 ## result
-servier.result <- servier.history %>% 
+servier.delivery <- servier.history %>% 
   mutate(`Pack Code` = stri_pad_left(`Pack Code`, 7, 0)) %>% 
   bind_rows(servier.qtr, servier.mat) %>% 
   group_by(`Pack Code`) %>% 
   mutate(`Product Name` = last(`Product Name`), 
          Product = last(Product), 
+         Prod_CN_Name = last(na.omit(Prod_CN_Name)), 
          `Corporation Description` = last(`Corporation Description`), 
          Corporation_CN = last(Corporation_CN), 
          `NFCI Description` = first(na.omit(`NFCI Description`))) %>% 
@@ -256,4 +260,4 @@ servier.result <- servier.history %>%
          `Value LC_Raw`, Units_Raw, `Counting Units_Raw`) %>% 
   arrange(Channel, desc(`Period Type`), Date, City_EN, MKT, `Pack Code`)
 
-write.xlsx(servier.result, '03_Outputs/Servier_CHC2_2018Q1_2020Q4.xlsx')
+write.xlsx(servier.delivery, '03_Outputs/Servier_CHC2_2018Q4_2020Q4.xlsx')

@@ -9,7 +9,7 @@
 ##---- Total sample ----
 imp.total <- raw.total %>% 
   mutate(flag = 0) %>% 
-  bind_rows(imp.fj, imp.sh)
+  bind_rows(imp.fj)
 
 write_feather(imp.total, '03_Outputs/Servier_CHC2_Imp.feather')
 
@@ -216,7 +216,7 @@ servier.mat <- servier.history %>%
   filter(`Period Type` == 'QTR', 
          Date %in% c('2020Q3', '2020Q2', '2020Q1')) %>% 
   mutate(`Pack Code` = stri_pad_left(`Pack Code`, 7, 0)) %>% 
-  bind_rows(servier.qtr) %>% 
+  bind_rows(servier.qtr, sh.qtr) %>% 
   group_by(City, `Pack Code`) %>% 
   mutate(`Product Name` = last(`Product Name`), 
          Product = last(Product), 
@@ -242,7 +242,7 @@ servier.mat <- servier.history %>%
 ## result
 servier.delivery <- servier.history %>% 
   mutate(`Pack Code` = stri_pad_left(`Pack Code`, 7, 0)) %>% 
-  bind_rows(servier.qtr, servier.mat) %>% 
+  bind_rows(servier.qtr, sh.qtr, servier.mat) %>% 
   group_by(`Pack Code`) %>% 
   mutate(`Product Name` = last(`Product Name`), 
          Product = last(Product), 

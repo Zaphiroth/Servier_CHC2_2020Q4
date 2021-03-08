@@ -7,9 +7,8 @@
 
 
 ##---- Beijing CHS ----
-bj.chs <- raw.servier %>% 
-  filter(Province == '北京市', 
-         Quarter == '2020Q4', 
+bj.chs <- raw.bj1 %>% 
+  filter(Quarter == '2020Q4', 
          grepl('服务站', Hospital_Name)) %>% 
   distinct(year = as.character(Year), 
            quarter = Quarter, 

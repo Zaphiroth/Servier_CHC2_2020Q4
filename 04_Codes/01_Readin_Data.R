@@ -45,7 +45,8 @@ raw.servier <- read_csv('02_Inputs/data/Servier_Pfizer_ahbjjssd20Q4_zj20Q3Q4_pac
 
 raw.data <- raw.servier %>% 
   filter(Project == 'Servier', 
-         Quarter == '2020Q4') %>% 
+         Quarter == '2020Q4', 
+         !(Province %in% c('北京市'))) %>% 
   distinct(year = as.character(Year), 
            quarter = Quarter, 
            date = gsub('/', '', Month), 
@@ -139,7 +140,40 @@ raw.venous1 <- read_csv('02_Inputs/data/Servier_ahbjjssdzj_17181920_packid_molei
 
 raw.venous <- raw.venous1 %>% 
   filter(Quarter == '2020Q4', 
-         !is.na(packcode)) %>% 
+         !is.na(packcode), 
+         !(Province %in% c('北京市'))) %>% 
+  distinct(year = as.character(Year), 
+           quarter = Quarter, 
+           date = gsub('/', '', Month), 
+           province = gsub('省|市', '', Province), 
+           city = if_else(City == '市辖区', '北京', gsub('市', '', City)), 
+           district = County, 
+           hospital = Hospital_Name, 
+           atc3 = stri_sub(ATC4_Code, 1, 4), 
+           molecule = Molecule_Desc, 
+           packid = stri_pad_left(packcode, 7, 0), 
+           units = if_else(is.na(Volume), Value / Price, Volume), 
+           sales = Value) %>% 
+  left_join(pchc.mapping3, by = c('province', 'city', 'district', 'hospital')) %>% 
+  filter(!is.na(pchc)) %>% 
+  left_join(market.def, by = c('atc3', 'molecule')) %>% 
+  filter(!is.na(market)) %>% 
+  mutate(packid = if_else(stri_sub(packid, 1, 5) == '47775', 
+                          stri_paste('58906', stri_sub(packid, 6, 7)), 
+                          packid), 
+         packid = if_else(stri_sub(packid, 1, 5) == '06470', 
+                          stri_paste('64895', stri_sub(packid, 6, 7)), 
+                          packid)) %>% 
+  filter(units > 0, sales > 0) %>% 
+  select(year, date, quarter, province, city, district, pchc, market, packid, units, sales)
+
+## Beijing
+raw.bj1 <- read_csv('02_Inputs/data/【法柏】20Q4北京交付表修-2103_Formatted_packid_moleinfo.csv', 
+                    locale = locale(encoding = 'GB18030'))
+
+raw.bj <- raw.bj1 %>% 
+  filter(Project %in% c('Servier', 'Servier\\痔疮静脉市场'), 
+         Quarter == '2020Q4') %>% 
   distinct(year = as.character(Year), 
            quarter = Quarter, 
            date = gsub('/', '', Month), 
@@ -176,7 +210,7 @@ raw.venous <- raw.venous1 %>%
 
 
 ##---- Raw total ----
-raw.total <- bind_rows(raw.data, raw.fj, raw.venous, raw.gz) %>% 
+raw.total <- bind_rows(raw.data, raw.fj, raw.venous, raw.bj, raw.gz) %>% 
   group_by(pchc) %>% 
   mutate(province = first(na.omit(province)), 
          city = first(na.omit(city)), 

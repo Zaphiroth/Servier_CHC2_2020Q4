@@ -64,15 +64,15 @@ raw.sh <- bind_rows(raw.sh1, raw.sh2) %>%
   select(year, date, quarter, province, city, district, pchc, market, packid, units, sales)
 
 ## Beijing
-raw.bj1 <- filter(raw.total, province == '北京')
-raw.bj2 <- read_feather('02_Inputs/Beijing_CHC_2017Q1_2020Q3.feather')
+sh.bj1 <- filter(raw.total, province == '北京')
+sh.bj2 <- read_feather('02_Inputs/Beijing_CHC_2017Q1_2020Q3.feather')
 
 
 ##---- Growth ----
 ## model growth
 sh.knn <- read.xlsx('02_Inputs/Shanghai_KNN_Result.xlsx')
 
-sh.model.growth <- bind_rows(raw.bj1, raw.bj2) %>% 
+sh.model.growth <- bind_rows(sh.bj1, sh.bj2) %>% 
   distinct(year, quarter, date, province, city, district, pchc, packid, sales, units) %>% 
   group_by(knn_pchc = pchc, packid, year, date, quarter) %>% 
   summarise(sales = sum(sales, na.rm = TRUE), 
@@ -110,27 +110,6 @@ chpa.growth <- chpa.format %>%
   filter(!is.na(growth_sales_sup), !is.infinite(growth_sales_sup), 
          !is.na(growth_units_sup), !is.infinite(growth_units_sup)) %>% 
   select(year, quarter, packid = Pack_ID, growth_sales_sup, growth_units_sup)
-
-## Shanghai growth
-set.seed(2020)
-sh.growth <- sh.model.growth %>% 
-  left_join(chpa.growth, by = c('year', 'quarter', 'packid')) %>% 
-  mutate(factor = runif(n(), -0.05, 0.05), 
-         growth_sales = if_else(is.na(growth_sales), growth_sales_sup + factor, growth_sales),
-         growth_sales = if_else(is.na(growth_sales), 1, growth_sales),
-         growth_sales = if_else(growth_sales > 3, 3, growth_sales),
-         growth_sales = if_else(growth_sales > quantile(growth_sales, 0.9),
-                                mean(growth_sales[growth_sales >= quantile(growth_sales, 0.25) & 
-                                                    growth_sales <= quantile(growth_sales, 0.75)]),
-                                growth_sales), 
-         growth_units = if_else(is.na(growth_units), growth_units_sup + factor, growth_units),
-         growth_units = if_else(is.na(growth_units), 1, growth_units),
-         growth_units = if_else(growth_units > 3, 3, growth_units),
-         growth_units = if_else(growth_units > quantile(growth_units, 0.9),
-                                mean(growth_units[growth_units >= quantile(growth_units, 0.25) & 
-                                                    growth_units <= quantile(growth_units, 0.75)]),
-                                growth_units)) %>% 
-  select(year, quarter, date, pchc, packid, growth_sales, growth_units)
 
 
 ##---- Prediction ----

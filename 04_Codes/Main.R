@@ -68,8 +68,8 @@ proj.nation <- ProjectNation(proj.sample.total = proj.sample,
                              city.tier = city.tier)
 
 proj.cs <- proj.nation %>% 
-  mutate(sales = if_else(province == '上海', sales * 0.5, sales), 
-         units = if_else(province == '上海', units * 0.5, units)) %>% 
+  # mutate(sales = if_else(province == '上海', sales * 0.5, sales), 
+  #        units = if_else(province == '上海', units * 0.5, units)) %>% 
   mutate(channel = 'CHC') %>% 
   bind_rows(bj.chs)
 
@@ -199,7 +199,8 @@ kTCM <- c('PU JI              S4I',
 
 
 ##---- Run format ----
-source('04_Codes/functions/FormatServier.R')
+## format
+source('04_Codes/functions/FormatServier.R', encoding = 'UTF-8')
 
 servier.qtr <- FormatServier(proj.price = proj.price, 
                              std.info = std.info, 
@@ -212,11 +213,57 @@ servier.qtr <- FormatServier(proj.price = proj.price,
 ## history
 servier.history <- read_xlsx('06_Deliveries/Servier_CHC2_2018Q4_2020Q3_20210114.xlsx')
 
+## Shanghai
+source('04_Codes/functions/ProjectShanghai.R', encoding = 'UTF-8')
+
+chpa.format <- read.xlsx('02_Inputs/ims_chpa_to20Q4_fmt.xlsx')
+
+sh.qtr <- ProjectShanghai(servier.qtr = servier.qtr, 
+                          servier.history = servier.history, 
+                          chpa.format = chpa.format)
+
+## TCM Others
+growth.others <- servier.history %>% 
+  filter(`Period Type` == 'QTR', 
+         Date %in% c('2020Q2', '2020Q3'), 
+         `Molecule composition Name` == 'TCM Others') %>% 
+  mutate(`Pack Code` = stri_pad_left(`Pack Code`, 7, 0)) %>% 
+  group_by(Channel, City, `Category II`, `Molecule composition Name`) %>% 
+  arrange(Date) %>% 
+  summarise(growth_sales = lead(`Value LC`) / `Value LC`, 
+            growth_units = lead(Units) / Units) %>% 
+  ungroup() %>% 
+  filter(!is.na(growth_sales))
+
+others.qtr <- servier.history %>% 
+  filter(`Period Type` == 'QTR', 
+         Date == '2020Q3', 
+         `Molecule composition Name` == 'TCM Others') %>% 
+  mutate(`Pack Code` = stri_pad_left(`Pack Code`, 7, 0)) %>% 
+  left_join(growth.others, by = c('Channel', 'City', 'Category II', 
+                                  'Molecule composition Name')) %>% 
+  mutate(Quarter = 'Q4', 
+         Date = '2020Q4', 
+         `Value LC` = `Value LC` * growth_sales, 
+         `Value LC_Raw` = `Value LC_Raw` * growth_sales, 
+         Units = Units * growth_units, 
+         Units_Raw = Units_Raw * growth_units, 
+         `Counting Units` = `Counting Units` * growth_units, 
+         `Counting Units_Raw` = `Counting Units_Raw` * growth_units) %>% 
+  filter(`Value LC` > 0, Units > 0) %>% 
+  select(-starts_with('growth_'))
+
+## QTR
+servier.qtr <- servier.qtr %>% 
+  filter(City != '上海') %>% 
+  bind_rows(sh.qtr, others.qtr)
+
+## MAT
 servier.mat <- servier.history %>% 
   filter(`Period Type` == 'QTR', 
          Date %in% c('2020Q3', '2020Q2', '2020Q1')) %>% 
   mutate(`Pack Code` = stri_pad_left(`Pack Code`, 7, 0)) %>% 
-  bind_rows(servier.qtr, sh.qtr) %>% 
+  bind_rows(servier.qtr) %>% 
   group_by(City, `Pack Code`) %>% 
   mutate(`Product Name` = last(`Product Name`), 
          Product = last(Product), 
@@ -242,7 +289,7 @@ servier.mat <- servier.history %>%
 ## result
 servier.delivery <- servier.history %>% 
   mutate(`Pack Code` = stri_pad_left(`Pack Code`, 7, 0)) %>% 
-  bind_rows(servier.qtr, sh.qtr, servier.mat) %>% 
+  bind_rows(servier.qtr, servier.mat) %>% 
   group_by(`Pack Code`) %>% 
   mutate(`Product Name` = last(`Product Name`), 
          Product = last(Product), 

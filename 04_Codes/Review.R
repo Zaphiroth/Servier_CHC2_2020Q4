@@ -58,7 +58,7 @@ write.xlsx(vbp.check, '05_Internal_Review/Result_VBP_Check.xlsx')
 
 ##---- Check SOP -----
 ## CHPA
-chpa.format <- read.xlsx('05_Internal_Review/ims_chpa_to20Q4_fmt.xlsx')
+# chpa.format <- read.xlsx('05_Internal_Review/ims_chpa_to20Q4_fmt.xlsx')
 
 servier.chpa <- chpa.format %>% 
   pivot_longer(cols = c(ends_with('UNIT'), ends_with('SU'), ends_with('RENMINBI')), 
@@ -78,7 +78,7 @@ servier.chpa <- chpa.format %>%
          Units = UNIT, DosageUnits = SU, Sales = RENMINBI) %>% 
   filter(!(ATC3 == 'V03B' & !(Prod_Desc %in% kTCM)))
 
-write.xlsx(servier.chpa, '05_Internal_Review/Servier_CHC2_CHPA_2018Q4_2020Q4.xlsx')
+write.xlsx(servier.chpa, '05_Internal_Review/Servier_CHC2_2018Q4_2020Q4_CHPA.xlsx')
 
 ## price
 price.check <- servier.delivery %>% 
